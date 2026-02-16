@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shopping Cart - JewSA</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/src/style.css">
+    <script src="https://js.stripe.com/v3/"></script>
+</head>
+<body>
+    <header>
+        <nav class="main-nav">
+            <a href="/" class="nav-link">Shop</a>
+            <h1>JewSA</h1>
+            <div class="cart-icon">
+                🛒 <span id="cart-count">0</span>
+            </div>
+        </nav>
+        <p class="tagline">Where Pride Meets Punchlines</p>
+    </header>
+    
+    <main>
+        <div class="cart-page">
+            <h2>Shopping Cart</h2>
+            <div id="cart-items" class="cart-items">
+                <!-- Cart items will be loaded here -->
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <p>© 2026 JewSA - Proudly printed on demand</p>
+    </footer>
+
+    <script>
+        const CART_STORAGE_KEY = 'jewsa-cart';
+        let cart = JSON.parse(localStorage.getItem(CART_STORAGE_KEY) || '[]');
+
+        // Product data with color variants
+        const PRODUCTS = {
+            hat: {
+                images: {
+                    'Black': 'https://files.cdn.printful.com/files/3f4/3f41dd5bee9414a4c43fcefc2a63a429_preview.png',
+                    'Navy': 'https://files.cdn.printful.com/files/1b2/1b2861d8949ed555c9c6ee515ff6053d_preview.png',
+                    'Khaki': 'https://files.cdn.printful.com/files/983/983d05f3b8b20e192b3d23616ce067f8_preview.png'
+                }
+            }
+        };
+
+        function updateCart() {
+            const cartItems = document.getElementById('cart-items');
+            const count = cart.reduce((sum, item) => sum + item.quantity, 0);
+            document.getElementById('cart-count').textContent = count;
+
+            if (!cart.length) {
+                cartItems.innerHTML = `
+                    <div class="empty-cart">
+                        <p>Your cart is empty</p>
+                        <a href="/" class="button">Continue Shopping</a>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            let total = 0;
+
+            cart.forEach(item => {
+                total += item.price * item.quantity;
+                const itemName = item.color 
+                    ? `${item.name} - ${item.color}`
+                    : item.name;
+                
+                // Use the correct image URL for hats
+                const imageUrl = item.id === '419417492' && item.color 
+                    ? PRODUCTS.hat.images[item.color]
+                    : item.image;
+
+                html += `
+                    <div class="cart-item">
+                        <img src="${imageUrl}" alt="${itemName}">
+                        <div class="item-details">
+                            <h3>${itemName}</h3>
+                            <p>Size: ${item.size}</p>
+                            <p class="item-price">$${(item.price * item.quantity).toFixed(2)}</p>
+                            <div class="item-actions">
+                                <button onclick="updateQuantity('${item.id}', '${item.variantKey}', ${item.quantity - 1})">−</button>
+                                <span>${item.quantity}</span>
+                                <button onclick="updateQuantity('${item.id}', '${item.variantKey}', ${item.quantity + 1})">+</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `
+                <div class="cart-summary">
+                    <div class="cart-total">
+                        <span>Total</span>
+                        <span>$${total.toFixed(2)}</span>
+                    </div>
+                    <button onclick="checkout()" class="checkout-button">Proceed to Checkout</button>
+                    <a href="/" class="continue-shopping">Continue Shopping</a>
+                </div>
+            `;
+
+            cartItems.innerHTML = html;
+        }
+
+        function updateQuantity(productId, variantKey, newQuantity) {
+            if (newQuantity < 1) {
+                cart = cart.filter(item => !(item.id === productId && item.variantKey === variantKey));
+            } else {
+                const item = cart.find(item => item.id === productId && item.variantKey === variantKey);
+                if (item) {
+                    item.quantity = newQuantity;
+                }
+            }
+            
+            localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
+            updateCart();
+        }
+
+        async function checkout() {
+            try {
+                const response = await fetch('/api/create-checkout-session', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        items: cart
+                    }),
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.message || 'Checkout failed');
+                }
+
+                const { sessionId } = await response.json();
+                const stripe = Stripe('pk_test_51T1DIdDWmfebG2VVcdRDysOhc51iqZtkiFX28qTdH0vM6dxgQjDrwk2QBg4ZwKkyZfjXuXkmGDGcv6LCqlMwjVZs00onC99X7f');
+                const { error } = await stripe.redirectToCheckout({
+                    sessionId: sessionId
+                });
+
+                if (error) {
+                    throw new Error(error.message);
+                }
+            } catch (error) {
+                console.error('Checkout error:', error);
+                alert('Checkout failed. Please try again.');
+            }
+        }
+
+        // Initialize cart display
+        document.addEventListener('DOMContentLoaded', updateCart);
+    </script>
+</body>
+</html>

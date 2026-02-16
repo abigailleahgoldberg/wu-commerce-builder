@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ghostface's Golden Store</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/src/style.css">
+    <script src="https://js.stripe.com/v3/"></script>
+</head>
+<body>
+    <header>
+        <nav class="main-nav">
+            <a href="/" class="nav-link">Shop</a>
+            <h1>Ironman's Essentials</h1>
+            <a href="/cart" class="cart-icon">
+                🛒 <span id="cart-count">0</span>
+            </a>
+        </nav>
+        <p class="tagline">Supreme Clientele, Supreme Products</p>
+    </header>
+    
+    <main>
+        <section class="products">
+            <article class="product-card" data-product="wallabees">
+                <img src="https://example.com/wallabees.jpg" alt="Classic Wallabees">
+                <h2>Ghostface Wallabees</h2>
+                <p class="price">$180.00</p>
+                <p class="description">Classic style, straight from Staten Island. The essential Wallabee for any true warrior.</p>
+                <div class="variants">
+                    <select id="wallabees-size" aria-label="Size">
+                        <option value="">Select Size</option>
+                        <option value="8">US 8</option>
+                        <option value="9">US 9</option>
+                        <option value="10">US 10</option>
+                        <option value="11">US 11</option>
+                        <option value="12">US 12</option>
+                    </select>
+                    <select id="wallabees-color" aria-label="Color">
+                        <option value="">Select Color</option>
+                        <option value="Cream">Cream</option>
+                        <option value="Brown">Brown</option>
+                        <option value="Black">Black</option>
+                    </select>
+                </div>
+                <button class="buy-button">Add to Cart</button>
+            </article>
+
+            <article class="product-card" data-product="robe">
+                <img src="https://example.com/robe.jpg" alt="Luxury Robe">
+                <h2>Pretty Toney Robe</h2>
+                <p class="price">$250.00</p>
+                <p class="description">Luxurious silk robe. For when you're feeling pretty toney.</p>
+                <div class="variants">
+                    <select id="robe-size" aria-label="Size">
+                        <option value="">Select Size</option>
+                        <option value="S">Small</option>
+                        <option value="M">Medium</option>
+                        <option value="L">Large</option>
+                        <option value="XL">X-Large</option>
+                    </select>
+                </div>
+                <button class="buy-button">Add to Cart</button>
+            </article>
+        </section>
+    </main>
+
+    <footer>
+        <p>© 2024 Ghostface Enterprises - Wu-Tang is for the children</p>
+    </footer>
+</body>
+</html>

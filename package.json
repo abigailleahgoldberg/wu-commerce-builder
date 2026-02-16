@@ -1,0 +1,21 @@
+{
+  "name": "wu-commerce-builder",
+  "version": "1.0.0",
+  "description": "Wu-Tang inspired e-commerce builder - C.R.E.A.M. (Commerce Rules Everything Around Me)",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "wu-tang",
+    "e-commerce",
+    "stripe",
+    "vercel",
+    "printful"
+  ],
+  "author": "Wu-Tang AI Clan",
+  "license": "MIT",
+  "dependencies": {
+    "stripe": "^14.16.0"
+  }
+}

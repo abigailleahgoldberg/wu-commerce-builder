@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JewSA - Proud, Punny, Perfect</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/src/style.css">
+    <script src="https://js.stripe.com/v3/"></script>
+</head>
+<body>
+    <header>
+        <nav class="main-nav">
+            <a href="/" class="nav-link">Shop</a>
+            <h1>JewSA</h1>
+            <a href="/cart" class="cart-icon">
+                🛒 <span id="cart-count">0</span>
+            </a>
+        </nav>
+        <p class="tagline">Where Pride Meets Punchlines</p>
+    </header>
+    
+    <main>
+        <section class="products">
+            <article class="product-card" data-product="tee">
+                <img src="https://files.cdn.printful.com/files/b4e/b4ebbc30701e79902092467a74f74124_preview.png" alt="JewSA Basic Tee">
+                <h2>JewSA Basic Tee</h2>
+                <p class="price">$25.00</p>
+                <p class="description">Not your bubbe's basic tee! Show your stars, stripes, and chutzpah with our flagship shirt.</p>
+                <div class="variants">
+                    <select id="tee-size" aria-label="Size">
+                        <option value="">Select Size</option>
+                        <option value="S">Small</option>
+                        <option value="M">Medium</option>
+                        <option value="L">Large</option>
+                        <option value="XL">X-Large</option>
+                        <option value="2XL">2X-Large</option>
+                        <option value="3XL">3X-Large</option>
+                        <option value="4XL">4X-Large</option>
+                    </select>
+                </div>
+                <button class="buy-button">Add to Cart</button>
+            </article>
+
+            <article class="product-card" data-product="hat">
+                <img id="hat-image" src="https://files.cdn.printful.com/files/3f4/3f41dd5bee9414a4c43fcefc2a63a429_preview.png" alt="JewSA Old School Bucket Hat" class="product-image">
+                <h2>JewSA Old School Bucket Hat</h2>
+                <p class="price">$25.00</p>
+                <p class="description">Keep your keppah cool! The perfect blend of old school style and new school pride.</p>
+                <div class="variants">
+                    <select id="hat-color" aria-label="Color" onchange="updateHatImage(this.value)">
+                        <option value="">Select Color</option>
+                        <option value="Black">Black</option>
+                        <option value="Navy">Navy</option>
+                        <option value="Khaki">Khaki</option>
+                    </select>
+                    <select id="hat-size" aria-label="Size" style="margin-top: 0.5rem;">
+                        <option value="">Select Size</option>
+                        <option value="S/M">S/M</option>
+                        <option value="L/XL">L/XL</option>
+                    </select>
+                </div>
+                <button class="buy-button">Add to Cart</button>
+            </article>
+        </section>
+
+        <section id="cart-preview">
+            <h2>Shopping Cart</h2>
+            <div id="cart-items"></div>
+        </section>
+    </main>
+
+    <footer>
+        <p>© 2026 JewSA - Proudly printed on demand</p>
+    </footer>
+
+    <script>
+        // Cart storage key
+        const CART_STORAGE_KEY = 'jewsa-cart';
+        let cart = JSON.parse(localStorage.getItem(CART_STORAGE_KEY) || '[]');
+
+        // Product data with color variants
+        const PRODUCTS = {
+            tee: {
+                id: '419473357',
+                name: 'JewSA Basic Tee',
+                price: 25.00,
+                image: 'https://files.cdn.printful.com/files/b4e/b4ebbc30701e79902092467a74f74124_preview.png'
+            },
+            hat: {
+                id: '419417492',
+                name: 'JewSA Old School Bucket Hat',
+                price: 25.00,
+                images: {
+                    'Black': 'https://files.cdn.printful.com/files/3f4/3f41dd5bee9414a4c43fcefc2a63a429_preview.png',
+                    'Navy': 'https://files.cdn.printful.com/files/1b2/1b2861d8949ed555c9c6ee515ff6053d_preview.png',
+                    'Khaki': 'https://files.cdn.printful.com/files/983/983d05f3b8b20e192b3d23616ce067f8_preview.png'
+                },
+                image: 'https://files.cdn.printful.com/files/3f4/3f41dd5bee9414a4c43fcefc2a63a429_preview.png'
+            }
+        };
+
+        // Update hat image based on color selection
+        function updateHatImage(color) {
+            console.log('Updating hat color:', color);
+            const hatImage = document.getElementById('hat-image');
+            if (color && PRODUCTS.hat.images[color]) {
+                const newImageUrl = PRODUCTS.hat.images[color];
+                console.log('New image URL:', newImageUrl);
+                
+                // Preload the image
+                const tempImg = new Image();
+                tempImg.onload = function() {
+                    hatImage.classList.add('fade');
+                    setTimeout(() => {
+                        hatImage.src = newImageUrl;
+                        hatImage.classList.remove('fade');
+                        console.log('Image updated successfully');
+                    }, 150);
+                };
+                tempImg.onerror = function() {
+                    console.error('Failed to load image:', newImageUrl);
+                };
+                tempImg.src = newImageUrl;
+            }
+        }
+
+        function addToCart(productType) {
+            console.log('Adding to cart:', productType);
+            
+            const product = PRODUCTS[productType];
+            let size, color;
+            
+            if (productType === 'hat') {
+                size = document.getElementById('hat-size').value;
+                color = document.getElementById('hat-color').value;
+                
+                if (!size || !color) {
+                    alert('Please select both size and color');
+                    return;
+                }
+            } else {
+                size = document.getElementById('tee-size').value;
+                if (!size) {
+                    alert('Please select a size');
+                    return;
+                }
+            }
+
+            const variantKey = productType === 'hat' ? `${size}-${color}` : size;
+            const existingItem = cart.find(item => item.id === product.id && item.variantKey === variantKey);
+
+            if (existingItem) {
+                existingItem.quantity += 1;
+            } else {
+                cart.push({
+                    ...product,
+                    size,
+                    color: productType === 'hat' ? color : undefined,
+                    image: productType === 'hat' ? PRODUCTS.hat.images[color] : product.image,
+                    variantKey,
+                    quantity: 1
+                });
+            }
+
+            localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
+            updateCartDisplay();
+            showCartNotification('Item added to cart!');
+        }
+
+        function updateCartDisplay() {
+            const count = cart.reduce((sum, item) => sum + item.quantity, 0);
+            document.getElementById('cart-count').textContent = count;
+            
+            // Update cart preview
+            const cartItems = document.getElementById('cart-items');
+            if (!cart.length) {
+                cartItems.innerHTML = '<p class="empty-cart">Your cart is empty</p>';
+                return;
+            }
+
+            let html = '';
+            let total = 0;
+
+            cart.forEach(item => {
+                total += item.price * item.quantity;
+                const itemName = item.color 
+                    ? `${item.name} - ${item.color}`
+                    : item.name;
+
+                // Use correct image URL for preview
+                const imageUrl = item.id === '419417492' && item.color 
+                    ? PRODUCTS.hat.images[item.color]
+                    : item.image;
+
+                html += `
+                    <div class="cart-item">
+                        <img src="${imageUrl}" alt="${itemName}">
+                        <div class="item-details">
+                            <h3>${itemName}</h3>
+                            <p>Size: ${item.size}</p>
+                            <p class="item-price">$${(item.price * item.quantity).toFixed(2)}</p>
+                        </div>
+                        <div class="item-actions">
+                            <button onclick="updateQuantity('${item.id}', '${item.variantKey}', ${item.quantity - 1})">−</button>
+                            <span>${item.quantity}</span>
+                            <button onclick="updateQuantity('${item.id}', '${item.variantKey}', ${item.quantity + 1})">+</button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `
+                <div class="cart-summary">
+                    <div class="cart-total">
+                        <span>Total: $${total.toFixed(2)}</span>
+                    </div>
+                    <a href="/cart" class="button">View Cart</a>
+                </div>
+            `;
+
+            cartItems.innerHTML = html;
+        }
+
+        function updateQuantity(productId, variantKey, newQuantity) {
+            console.log('Updating quantity:', { productId, variantKey, newQuantity });
+            
+            if (newQuantity < 1) {
+                cart = cart.filter(item => !(item.id === productId && item.variantKey === variantKey));
+            } else {
+                const item = cart.find(item => item.id === productId && item.variantKey === variantKey);
+                if (item) {
+                    item.quantity = newQuantity;
+                }
+            }
+            
+            localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
+            updateCartDisplay();
+        }
+
+        function showCartNotification(message) {
+            const notification = document.createElement('div');
+            notification.className = 'cart-notification';
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                notification.remove();
+            }, 2000);
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            // Add to cart button handlers
+            document.querySelectorAll('.buy-button').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const card = e.target.closest('.product-card');
+                    const productType = card.dataset.product;
+                    addToCart(productType);
+                });
+            });
+
+            // Initialize cart display
+            updateCartDisplay();
+        });
+    </script>
+</body>
+</html>
