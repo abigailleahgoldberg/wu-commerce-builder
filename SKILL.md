@@ -1,175 +1,162 @@
-# The Art of Digital Commerce (Wu-Tang Style)
+---
+name: wu-commerce-builder
+description: Build and deploy print-on-demand e-commerce stores using Vite, Stripe, Printful, and Vercel. Use when creating merch stores, product pages, shopping carts, checkout flows, Stripe webhook integrations, or Printful fulfillment pipelines. Covers the full stack from storefront HTML/CSS/JS to serverless API endpoints, payment processing, and automated order fulfillment.
+---
 
-> "You need to diversify your bonds" - Wu-Tang Financial
+# Wu-Commerce Builder
 
-This skill helps you build your digital empire with:
-- Sharp product displays
-- Secure money handling
-- Mobile-ready design
-- Swift deployment
-- Automated fulfillment
+Build production e-commerce stores with print-on-demand fulfillment. This skill is reverse-engineered from [jewsa.com](https://jewsa.com) — a live, working store.
 
-## The Essentials (Requirements)
+## Architecture
 
-- GitHub account (your digital dojo)
-- Vercel account (your distribution network)
-- Stripe account (handle that paper)
-- Printful account (optional, for physical products)
-
-## Quick Strike (Fast Setup)
-
-1. Establish your base:
-```bash
-git init your-shop-name
-cd your-shop-name
+```
+your-store/
+├── index.html                    # Storefront (Vite entry point)
+├── package.json                  # Vite + build config
+├── vite.config.js                # Vite build settings
+├── vercel.json                   # Vercel rewrites for API routes
+├── public/
+│   ├── src/style.css             # Global styles
+│   ├── cart/index.html           # Cart page
+│   └── success/index.html        # Post-purchase confirmation
+├── api/
+│   ├── package.json              # API dependencies (stripe, micro, node-fetch)
+│   ├── create-checkout-session.js # Stripe checkout session creator
+│   └── webhook.js                # Stripe → Printful fulfillment bridge
+└── src/                          # Optional: Vite source modules
+    └── style.css
 ```
 
-2. Build the foundation:
+**Stack:** Vite (build) → Vercel (hosting + serverless) → Stripe (payments) → Printful (fulfillment)
+
+## Setup Workflow
+
+### 1. Initialize Project
+
 ```bash
-mkdir -p public/src public/cart api
-touch public/src/style.css public/cart/index.html api/create-checkout-session.js
+mkdir your-store && cd your-store
+npm init -y
+npm install --save-dev vite
+npm install stripe
+mkdir -p public/src public/cart public/success api
 ```
 
-3. Set the rules (vercel.json):
+Set `package.json`:
 ```json
 {
-  "version": 2,
-  "builds": [
-    { "src": "api/**/*.js", "use": "@vercel/node" },
-    { "src": "package.json", "use": "@vercel/static-build" }
-  ],
-  "routes": [
-    { "src": "/api/(.*)", "dest": "/api/$1" },
-    { "handle": "filesystem" },
-    { "src": "/(.*)", "dest": "/$1" }
-  ]
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": { "vite": "^5.0.0" },
+  "dependencies": { "stripe": "^14.16.0" }
 }
 ```
 
-4. Declare your presence (package.json):
+`vite.config.js`:
+```js
+import { defineConfig } from 'vite'
+export default defineConfig({ build: { outDir: 'dist' } })
+```
+
+`vercel.json`:
+```json
+{ "rewrites": [{ "source": "/api/(.*)", "destination": "/api/$1" }] }
+```
+
+### 2. API Dependencies
+
+`api/package.json` — separate from root because Vercel serverless functions resolve deps independently:
 ```json
 {
-  "name": "your-shop-name",
-  "private": true,
-  "version": "1.0.0",
-  "scripts": {
-    "build": "echo 'No build required'"
-  },
   "dependencies": {
+    "micro": "^10.0.1",
+    "node-fetch": "^2.7.0",
     "stripe": "^14.16.0"
   }
 }
 ```
 
-## The Blueprints (Templates)
+### 3. Vercel Environment Variables
 
-Each file in the templates directory is battle-tested and ready for action. Copy them to your project and customize to your style.
+Set in Vercel Project → Settings → Environment Variables:
+- `STRIPE_SECRET_KEY` — Stripe secret key (sk_live_... or sk_test_...)
+- `STRIPE_PUBLISHABLE_KEY` — Stripe publishable key (pk_live_... or pk_test_...)
+- `STRIPE_WEBHOOK_SECRET` — from Stripe webhook endpoint config (whsec_...)
+- `PRINTFUL_API_TOKEN` — Printful API access token
 
-## Deployment (Taking it to the Streets)
+### 4. Stripe Webhook Setup
 
-1. Push your code:
-```bash
-git add .
-git commit -m "Initial setup - Wu-Tang style"
-git push origin main
-```
+In Stripe Dashboard → Developers → Webhooks:
+- Endpoint URL: `https://your-domain.com/api/webhook`
+- Listen for: `checkout.session.completed`
+- Copy the signing secret → set as `STRIPE_WEBHOOK_SECRET` in Vercel
 
-2. Set up on Vercel:
-- Connect your GitHub repo
-- Add your secret weapons:
-  - STRIPE_SECRET_KEY
-  - STRIPE_PUBLISHABLE_KEY
+## Key Implementation Details
 
-3. Claim your domain (optional):
-- Register in Vercel
-- Set up your DNS
+### Product Data Pattern
 
-## Testing the Product (Quality Control)
+Products defined as a JS object in `index.html`. Each product needs: `id` (Printful product ID), `name`, `price`, `image` (Printful CDN URL). Products with color variants use an `images` map.
 
-1. Test the flow:
-- Add products (like stacking vinyl)
-- Adjust quantities (count your inventory)
-- Remove items (keep it clean)
-
-2. Test payments:
-- Use Stripe test card: 4242 4242 4242 4242
-- Future expiry date
-- Any 3 digits for CVC
-- Any address info
-
-## Customization (Make it Yours)
-
-### Product Setup
-
-Update your catalog in index.html:
-```javascript
+```js
 const PRODUCTS = {
-    product1: {
-        id: 'your-id',
-        name: 'Product Name',
-        price: 25.00,
-        image: 'image-url'
+  tee: {
+    id: '419473357',
+    name: 'Store Basic Tee',
+    price: 25.00,
+    image: 'https://files.cdn.printful.com/files/.../preview.png'
+  },
+  hat: {
+    id: '419417492',
+    name: 'Store Bucket Hat',
+    price: 25.00,
+    images: {
+      'Black': 'https://files.cdn.printful.com/files/.../preview.png',
+      'Navy': 'https://files.cdn.printful.com/files/.../preview.png'
     }
-    // Add more heat
+  }
 };
 ```
 
-### Visual Style
+### Cart (localStorage)
 
-Set your colors in style.css:
-```css
-:root {
-    --primary: #your-color;
-    --accent: #your-color;
-    --background: #your-color;
-    --text: #your-color;
-}
-```
+Cart stored in `localStorage` as JSON array. Each item: `{ id, name, price, image, size, color?, variantKey, quantity }`. The `variantKey` uniquely identifies a variant (e.g., `"XL"` or `"S/M-Black"`).
 
-## Going Live (The Big Move)
+### Checkout Flow
 
-1. Switch to live mode:
-   - Update Stripe to live keys
-   - Connect real Printful API
-   - Set up your domain
-   - Test the full flow
-   - Set up notifications
+1. Cart page POSTs items to `/api/create-checkout-session`
+2. API creates Stripe Checkout Session with line items + metadata (serialized cart items)
+3. Client redirects to Stripe hosted checkout via `stripe.redirectToCheckout({ sessionId })`
+4. On success → `/success` page (clears localStorage cart)
 
-## Troubleshooting (Problem Solving)
+### Stripe Webhook → Printful (CRITICAL)
 
-When things get rough:
+See `references/webhook-guide.md` for the complete webhook implementation. Key gotchas:
 
-1. Image issues:
-   - Check your URLs
-   - Verify CORS settings
-   - Use proper CDN links
+1. **Vercel body parsing** — Must disable with `module.exports.config = { api: { bodyParser: false } }` and use `micro`'s `buffer()` to read raw body for Stripe signature verification
+2. **Stripe API 2026+** — Shipping address is at `session.collected_information.shipping_details`, NOT `session.shipping` or `session.shipping_details`
+3. **Variant mapping** — Webhook maps cart items to Printful sync variant IDs via a lookup table
 
-2. Payment problems:
-   - Verify your keys
-   - Check your routes
-   - Review those logs
+### Stripe Publishable Key
 
-3. Deployment drama:
-   - Check vercel.json
-   - Verify build settings
-   - Review environment setup
+The cart page needs the Stripe publishable key hardcoded in the client JS for `Stripe('pk_...')`. Use test keys during development, swap to live for production.
 
-## The Sacred Texts (References)
+## Templates
 
-- [Stripe Knowledge](https://stripe.com/docs/api)
-- [Vercel Wisdom](https://vercel.com/docs)
-- [Printful Scriptures](https://www.printful.com/docs)
+Copy templates from `assets/` as starting points. They contain the complete working implementation from jewsa.com with store-specific values replaced by placeholders.
 
-## The Wu-Tang Way
+- `assets/index.html` — Storefront with product cards and cart preview
+- `assets/cart.html` — Full cart page with checkout
+- `assets/success.html` — Order confirmation page
+- `assets/style.css` — Complete responsive stylesheet
+- `assets/create-checkout-session.js` — Stripe checkout API endpoint
+- `assets/webhook.js` — Stripe → Printful webhook (production-tested)
+- `assets/api-package.json` — API dependencies
 
-Remember:
-- Keep it simple but effective
-- Test everything twice
-- Protect your customers
-- Share knowledge
-- Cash Rules Everything Around Me, but customer service is forever
+## References
 
----
-
-Built with pride by the Wu-Tang Clan of AI Agents. 
-Protect Ya Neck, Secure Ya Code.
+- `references/webhook-guide.md` — Complete Stripe webhook + Printful integration guide with Vercel-specific gotchas
+- `references/printful-variant-mapping.md` — How to map products to Printful sync variant IDs

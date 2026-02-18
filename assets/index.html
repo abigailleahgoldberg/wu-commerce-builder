@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{STORE_NAME}} - {{STORE_TAGLINE}}</title>
+    <link rel="icon" type="image/png" href="/favicon.png">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/src/style.css">
+    <script src="https://js.stripe.com/v3/"></script>
+</head>
+<body>
+    <header>
+        <nav class="main-nav">
+            <a href="/" class="nav-link">Shop</a>
+            <h1>{{STORE_NAME}}</h1>
+            <a href="/cart" class="cart-icon">
+                🛒 <span id="cart-count">0</span>
+            </a>
+        </nav>
+        <p class="tagline">{{STORE_TAGLINE}}</p>
+    </header>
+    
+    <main>
+        <section class="products">
+            <!-- PRODUCT CARD TEMPLATE — duplicate for each product -->
+            <article class="product-card" data-product="{{PRODUCT_KEY}}">
+                <img src="{{PRODUCT_IMAGE_URL}}" alt="{{PRODUCT_NAME}}">
+                <h2>{{PRODUCT_NAME}}</h2>
+                <p class="price">${{PRODUCT_PRICE}}</p>
+                <p class="description">{{PRODUCT_DESCRIPTION}}</p>
+                <div class="variants">
+                    <select id="{{PRODUCT_KEY}}-size" aria-label="Size">
+                        <option value="">Select Size</option>
+                        <!-- Add size options -->
+                    </select>
+                </div>
+                <button class="buy-button">Add to Cart</button>
+            </article>
+
+            <!-- COLOR VARIANT PRODUCT TEMPLATE — for products with color options -->
+            <!--
+            <article class="product-card" data-product="{{PRODUCT_KEY}}">
+                <img id="{{PRODUCT_KEY}}-image" src="{{DEFAULT_IMAGE_URL}}" alt="{{PRODUCT_NAME}}" class="product-image">
+                <h2>{{PRODUCT_NAME}}</h2>
+                <p class="price">${{PRODUCT_PRICE}}</p>
+                <p class="description">{{PRODUCT_DESCRIPTION}}</p>
+                <div class="variants">
+                    <select id="{{PRODUCT_KEY}}-color" aria-label="Color" onchange="updateProductImage('{{PRODUCT_KEY}}', this.value)">
+                        <option value="">Select Color</option>
+                    </select>
+                    <select id="{{PRODUCT_KEY}}-size" aria-label="Size" style="margin-top: 0.5rem;">
+                        <option value="">Select Size</option>
+                    </select>
+                </div>
+                <button class="buy-button">Add to Cart</button>
+            </article>
+            -->
+        </section>
+
+        <section id="cart-preview">
+            <h2>Shopping Cart</h2>
+            <div id="cart-items"></div>
+        </section>
+    </main>
+
+    <footer>
+        <p>© {{YEAR}} {{STORE_NAME}} - {{FOOTER_TEXT}}</p>
+    </footer>
+
+    <script>
+        const CART_STORAGE_KEY = '{{STORE_SLUG}}-cart';
+        let cart = JSON.parse(localStorage.getItem(CART_STORAGE_KEY) || '[]');
+
+        // Define your products here — use Printful product IDs and CDN image URLs
+        const PRODUCTS = {
+            // Simple product (no color variants):
+            // productKey: {
+            //     id: 'PRINTFUL_PRODUCT_ID',
+            //     name: 'Product Name',
+            //     price: 25.00,
+            //     image: 'https://files.cdn.printful.com/files/.../preview.png'
+            // },
+            //
+            // Product with color variants:
+            // productKey: {
+            //     id: 'PRINTFUL_PRODUCT_ID',
+            //     name: 'Product Name',
+            //     price: 25.00,
+            //     images: {
+            //         'Color1': 'https://files.cdn.printful.com/files/.../preview.png',
+            //         'Color2': 'https://files.cdn.printful.com/files/.../preview.png'
+            //     },
+            //     image: 'https://files.cdn.printful.com/files/.../default_preview.png'
+            // }
+        };
+
+        // Update product image on color selection (for color-variant products)
+        function updateProductImage(productKey, color) {
+            const product = PRODUCTS[productKey];
+            const imgEl = document.getElementById(`${productKey}-image`);
+            if (color && product.images && product.images[color]) {
+                const newUrl = product.images[color];
+                const temp = new Image();
+                temp.onload = () => {
+                    imgEl.classList.add('fade');
+                    setTimeout(() => {
+                        imgEl.src = newUrl;
+                        imgEl.classList.remove('fade');
+                    }, 150);
+                };
+                temp.src = newUrl;
+            }
+        }
+
+        function addToCart(productType) {
+            const product = PRODUCTS[productType];
+            let size, color;
+
+            // Check if product has color variants
+            if (product.images) {
+                color = document.getElementById(`${productType}-color`).value;
+                size = document.getElementById(`${productType}-size`).value;
+                if (!size || !color) {
+                    alert('Please select both size and color');
+                    return;
+                }
+            } else {
+                size = document.getElementById(`${productType}-size`).value;
+                if (!size) {
+                    alert('Please select a size');
+                    return;
+                }
+            }
+
+            const variantKey = color ? `${size}-${color}` : size;
+            const existing = cart.find(item => item.id === product.id && item.variantKey === variantKey);
+
+            if (existing) {
+                existing.quantity += 1;
+            } else {
+                cart.push({
+                    ...product,
+                    size,
+                    color: color || undefined,
+                    image: color && product.images ? product.images[color] : product.image,
+                    variantKey,
+                    quantity: 1
+                });
+            }
+
+            localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
+            updateCartDisplay();
+            showCartNotification('Item added to cart!');
+        }
+
+        function updateCartDisplay() {
+            const count = cart.reduce((sum, item) => sum + item.quantity, 0);
+            document.getElementById('cart-count').textContent = count;
+
+            const cartItems = document.getElementById('cart-items');
+            if (!cart.length) {
+                cartItems.innerHTML = '<p class="empty-cart">Your cart is empty</p>';
+                return;
+            }
+
+            let html = '';
+            let total = 0;
+            cart.forEach(item => {
+                total += item.price * item.quantity;
+                const itemName = item.color ? `${item.name} - ${item.color}` : item.name;
+                html += `
+                    <div class="cart-item">
+                        <img src="${item.image}" alt="${itemName}">
+                        <div class="item-details">
+                            <h3>${itemName}</h3>
+                            <p>Size: ${item.size}</p>
+                            <p class="item-price">$${(item.price * item.quantity).toFixed(2)}</p>
+                        </div>
+                        <div class="item-actions">
+                            <button onclick="updateQuantity('${item.id}', '${item.variantKey}', ${item.quantity - 1})">−</button>
+                            <span>${item.quantity}</span>
+                            <button onclick="updateQuantity('${item.id}', '${item.variantKey}', ${item.quantity + 1})">+</button>
+                        </div>
+                    </div>`;
+            });
+            html += `
+                <div class="cart-summary">
+                    <div class="cart-total"><span>Total: $${total.toFixed(2)}</span></div>
+                    <a href="/cart" class="button">View Cart</a>
+                </div>`;
+            cartItems.innerHTML = html;
+        }
+
+        function updateQuantity(productId, variantKey, newQuantity) {
+            if (newQuantity < 1) {
+                cart = cart.filter(item => !(item.id === productId && item.variantKey === variantKey));
+            } else {
+                const item = cart.find(item => item.id === productId && item.variantKey === variantKey);
+                if (item) item.quantity = newQuantity;
+            }
+            localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
+            updateCartDisplay();
+        }
+
+        function showCartNotification(message) {
+            const n = document.createElement('div');
+            n.className = 'cart-notification';
+            n.textContent = message;
+            document.body.appendChild(n);
+            setTimeout(() => n.remove(), 2000);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('.buy-button').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const card = e.target.closest('.product-card');
+                    addToCart(card.dataset.product);
+                });
+            });
+            updateCartDisplay();
+        });
+    </script>
+</body>
+</html>
