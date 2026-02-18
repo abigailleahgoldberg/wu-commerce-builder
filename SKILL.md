@@ -5,7 +5,7 @@ description: Build and deploy print-on-demand e-commerce stores using Vite, Stri
 
 # Wu-Commerce Builder
 
-Build production e-commerce stores with print-on-demand fulfillment. This skill is reverse-engineered from [jewsa.com](https://jewsa.com) — a live, working store.
+Build production e-commerce stores with print-on-demand fulfillment. Battle-tested architecture from a live production store.
 
 ## Architecture
 
@@ -104,18 +104,18 @@ Products defined as a JS object in `index.html`. Each product needs: `id` (Print
 ```js
 const PRODUCTS = {
   tee: {
-    id: '419473357',
-    name: 'Store Basic Tee',
+    id: 'PRINTFUL_PRODUCT_ID',
+    name: 'Your T-Shirt',
     price: 25.00,
-    image: 'https://files.cdn.printful.com/files/.../preview.png'
+    image: 'https://files.cdn.printful.com/files/YOUR_FILE/preview.png'
   },
   hat: {
-    id: '419417492',
-    name: 'Store Bucket Hat',
+    id: 'PRINTFUL_PRODUCT_ID',
+    name: 'Your Hat',
     price: 25.00,
     images: {
-      'Black': 'https://files.cdn.printful.com/files/.../preview.png',
-      'Navy': 'https://files.cdn.printful.com/files/.../preview.png'
+      'Black': 'https://files.cdn.printful.com/files/YOUR_FILE/preview.png',
+      'Navy': 'https://files.cdn.printful.com/files/YOUR_FILE/preview.png'
     }
   }
 };
@@ -146,7 +146,7 @@ The cart page needs the Stripe publishable key hardcoded in the client JS for `S
 
 ## Templates
 
-Copy templates from `assets/` as starting points. They contain the complete working implementation from jewsa.com with store-specific values replaced by placeholders.
+Copy templates from `assets/` as starting points. All store-specific values are replaced by `{{PLACEHOLDER}}` tokens — customize for your store.
 
 - `assets/index.html` — Storefront with product cards and cart preview
 - `assets/cart.html` — Full cart page with checkout

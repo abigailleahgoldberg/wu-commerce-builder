@@ -1,7 +1,7 @@
 {
-  "name": "wu-commerce-builder",
+  "name": "commerce-builder",
   "version": "2.0.0",
   "description": "Production e-commerce builder — Vite + Stripe + Printful + Vercel",
-  "author": "Wu-Tang AI Clan",
+  "author": "OpenClaw Community",
   "license": "MIT"
 }
